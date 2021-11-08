@@ -166,7 +166,7 @@ class PredictionListAPI(Resource):
 # acompañadas de un identificador de predicción, para obtener los datos de una particular
 # Si el API permite modificar predicciones particulares, aquí se debería de manejar el
 # método PUT o PATCH para una predicción en particular.
-@ns.route('/<int:prediction_id>', methods=['GET'])
+@ns.route('/<int:prediction_id>', methods=['GET', 'PUT'])
 class PredictionAPI(Resource):
     """ Manejador de una predicción particular
     """
@@ -188,6 +188,41 @@ class PredictionAPI(Resource):
             # Se usa la función "marshall_prediction" para convertir la predicción de la
             # base de datos a un recurso REST
             return marshall_prediction(prediction), 200
+    
+    @ns.doc({'prediction_id': 'Identificador de la predicción a actualizar'})
+    @ns.expect(survivalObservation)
+    def put(self, prediction_id):
+        """ Procesa las solicitudes PUT de una predicción particular
+            :param prediction_id: El identificador de la predicción a actualizar
+        """
+        # La siguiente línea convierte una representación REST de una Prediccion en
+        # un Objeto Prediccion mapeado en la base de datos mediante SQL Alchemy
+        predictionFromRequest = Prediction(representation=api.payload)
+        # Usamos la clase Prediction que mapea la tabla en la base de datos para buscar
+        # la predicción que tiene el identificador que se usó como parámetro de esta
+        # solicitud. Si no existe entonces se devuelve un mensaje de error 404 No encontrado
+        prediction = Prediction.query.filter_by(prediction_id=prediction_id).first()
+        
+        #Sustituimos los valores actuales por los del request:
+        prediction.Pclass = predictionFromRequest.Pclass
+        prediction.Sex = predictionFromRequest.Sex
+        prediction.Age = predictionFromRequest.Age
+        prediction.SibSp = predictionFromRequest.SibSp
+        prediction.Parch = predictionFromRequest.Parch
+        prediction.Fare = predictionFromRequest.Fare
+        prediction.Embarked_C = predictionFromRequest.Embarked_C
+        prediction.Embarked_Q = predictionFromRequest.Embarked_Q
+        prediction.Embarked_S = predictionFromRequest.Embarked_S
+
+        #Actualizamos:
+        db.session.commit()
+
+        if not prediction:
+            return 'Id {} no existe en la base de datos'.format(prediction_id), 404
+        else:
+            # Se usa la función "marshall_prediction" para convertir la predicción de la
+            # base de datos a un recurso REST
+            return marshall_prediction(prediction), 200
 
 
 # =======================================================================================
@@ -198,15 +233,15 @@ def marshall_prediction(prediction):
     """
     response_url = api.url_for(PredictionAPI, prediction_id=prediction.prediction_id)
     model_data = {
-        'Pclass': prediction.sepal_length,
-        'Sex': prediction.sepal_width,
-        'Age': prediction.petal_length,
-        'SibSp': prediction.petal_width,
-        'Parch': prediction.sepal_length,
-        'Fare': prediction.sepal_width,
-        'Embarked_C': prediction.petal_length,
-        'Embarked_Q': prediction.petal_width,
-        'Embarked_S': prediction.petal_width,
+        'Pclass': prediction.Pclass,
+        'Sex': prediction.Sex,
+        'Age': prediction.Age,
+        'SibSp': prediction.SibSp,
+        'Parch': prediction.Parch,
+        'Fare': prediction.Fare,
+        'Embarked_C': prediction.Embarked_C,
+        'Embarked_Q': prediction.Embarked_Q,
+        'Embarked_S': prediction.Embarked_S,
         'class': str(prediction.predicted_class)
     }
     response = {

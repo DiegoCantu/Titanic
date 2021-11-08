@@ -9,7 +9,6 @@ from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LogisticRegression
 import pickle
 
-
 # =======================================================================================
 def create_simple_model():
     """ Función para entrenar un modelo simple usando los datos de prueba de tipos de flores
@@ -49,7 +48,8 @@ def create_simple_model():
     # Para este ejemplo creamos un modelo de regresión logística simple
     model = LogisticRegression(solver='liblinear', multi_class='ovr')
     model.fit(X_train, Y_train)
-
+    print(X_train)
+    print(Y_train)
     # Hasta este punto tu modelo debe de estar integrado y funcioando como lo esperas.
 
     # --------------------------------------------------------------------------------

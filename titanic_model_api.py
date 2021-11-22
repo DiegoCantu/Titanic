@@ -10,6 +10,8 @@ from flask_restx import Api, Resource, fields
 from werkzeug.middleware.proxy_fix import ProxyFix
 import pickle
 import numpy
+from flask import render_template
+from ml_titanic_model import get_confusion_matrix, get_simple_confusion_matrix
 
 # ---------------------------------------------------------------------------------------
 #                       Configuración del proyecto
@@ -224,6 +226,51 @@ class PredictionAPI(Resource):
             # base de datos a un recurso REST
             return marshall_prediction(prediction), 200
 
+
+# =======================================================================================
+# La clase ModelPerformanceAPI devuelve el desempeño del modelo, según las observaciones
+# que se han actualizado con las clases reales.
+# Modifica esta clase para que se adapte a tu modelo predictivo.
+@ns.route('/performance/<string:metric>', methods=['GET'])
+class ModelPerformanceAPI(Resource):
+    """ Manejador del recurso REST para el desempeño del modelo.
+    """
+    
+    # -----------------------------------------------------------------------------------
+    @ns.doc({'metric': 'Nombre de la métrica a generar'})
+    def get(self, metric):
+        """ Devuelve los datos de desempeño del modelo.
+        """
+        if metric == 'confusion_matrix':
+            # el método "isnot" de las propiedades del modelo permiten buscar las 
+            # observaciones que ya están calificadas
+            reported_predictions = Prediction.query.filter(
+                Prediction.observed_class.isnot(None) 
+            ).all()
+            return get_confusion_matrix(reported_predictions), 200
+        else:
+            return 'Métrica no soportada: {}'.format(metric), 400
+
+
+# =======================================================================================
+@app.route('/metrics/')
+def render_metrics():
+    """ Método que obtiene las métricas del modelo y las envía a la plantilla HTML para
+        generar las gráficas.
+    """
+    reported_predictions = Prediction.query.filter(
+            Prediction.observed_class.isnot(None)
+    ).all()
+    labels, matrix = get_simple_confusion_matrix(reported_predictions)
+    # El archivo "templates/metrics.html" contiene el codigo necesario para desplegar
+    # la gráfica de la matriz de confusión del modelo.
+    # Este template recibe dos argumentos: labels y matrix.
+    #  + Labels: Las etiquetas de la matriz de confusión
+    #  + matrix: La matriz de confusión del modelo
+    #
+    # Consulta este archivo para conocer cómo se usa la biblioteca Highcharts para
+    # generar la gráfica del modelo.
+    return render_template('metrics.html', labels=labels, matrix=matrix)
 
 # =======================================================================================
 def marshall_prediction(prediction):
